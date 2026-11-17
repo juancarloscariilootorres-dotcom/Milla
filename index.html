@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Millaray · Asistente Chilena IA</title>
+  <link id="dynamicManifest" rel="manifest">
+  <link id="dynamicIcon" rel="icon" type="image/png">
+  <link id="dynamicAppleIcon" rel="apple-touch-icon">
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0; background: #0f172a; color: #f8fafc;
+      display: flex; flex-direction: column; height: 100dvh;
+      user-select: none;
+    }
+    header {
+      padding: 10px 16px; background: #1e293b; border-bottom: 1px solid #334155;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .title-group { display: flex; flex-direction: column; gap: 2px; }
+    .title { font-weight: 700; font-size: 1.02rem; display: flex; align-items: center; gap: 6px; }
+    .net-badge { font-size: 0.72rem; color: #4ade80; font-weight: 600; }
+    .net-badge.offline { color: #fb923c; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      background: #334155; border: none; color: #f8fafc; width: 36px; height: 36px;
+      border-radius: 50%; font-size: 1.05rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #installBtn {
+      display: none; background: #16a34a; color: #fff; border: none;
+      padding: 6px 12px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+    }
+
+    /* Barra de Personalidades */
+    .personality-bar {
+      display: flex; gap: 6px; padding: 8px 12px;
+      background: #162032; border-bottom: 1px solid #334155;
+    }
+    .persona-btn {
+      flex: 1; padding: 7px 6px; border-radius: 12px; border: 1px solid #334155;
+      background: #0f172a; color: #94a3b8; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .persona-btn.active {
+      background: #2563eb; color: #ffffff; border-color: #3b82f6;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    }
+
+    /* Escenario del Avatar */
+    .avatar-stage {
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 85%);
+      border-bottom: 1px solid #1e293b;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .avatar-ring {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+    .avatar-ring.listening {
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      box-shadow: 0 0 24px rgba(34, 197, 94, 0.55);
+      transform: scale(1.04);
+    }
+    .avatar-ring.speaking {
+      background: linear-gradient(135deg, #f43f5e, #38bdf8);
+      box-shadow: 0 0 26px rgba(56, 189, 248, 0.6);
+      animation: pulseAura 1.1s infinite alternate;
+    }
+    .avatar-ring.thinking {
+      background: linear-gradient(135deg, #f59e0b, #a855f7);
+      box-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+    }
+    @keyframes pulseAura {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+    .avatar-ring svg {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      background: #172554;
+    }
+    .avatar-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .avatar-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .avatar-role {
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+    .avatar-mood-pill {
+      display: inline-block;
+      width: fit-content;
+      font-size: 0.72rem;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* Animaciones SVG internas */
+    .eye-blink {
+      transform-origin: center;
+      animation: blinkAnim 4.5s infinite;
+    }
+    @keyframes blinkAnim {
+      0%, 94%, 100% { transform: scaleY(1); }
+      97% { transform: scaleY(0.08); }
+    }
+    .head-float {
+      animation: floatHead 3.2s ease-in-out infinite;
+    }
+    @keyframes floatHead {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-2.5px); }
+    }
+
+    #chat {
+      flex: 1; overflow-y: auto; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      user-select: text;
+    }
+    .msg {
+      max-width: 84%; padding: 12px 16px; border-radius: 18px;
+      line-height: 1.45; font-size: 0.96rem; white-space: pre-wrap;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .msg img.chat-photo {
+      max-width: 100%; max-height: 220px; border-radius: 12px;
+      object-fit: cover; display: block;
+    }
+    .user { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 4px; }
+    .bot { align-self: flex-start; background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; border: 1px solid #334155; }
+    .system-note {
+      align-self: center; background: #1e293b; color: #94a3b8;
+      font-size: 0.76rem; padding: 5px 12px; border-radius: 999px; border: 1px solid #334155;
+    }
+    .error { align-self: center; background: #450a0a; color: #fecaca; border: 1px solid #991b1b; font-size: 0.86rem; }
+
+    .controls {
+      padding: 10px 12px 12px; background: #1e293b; border-top: 1px solid #334155;
+      display: flex; flex-direction: column; gap: 8px; align-items: center;
+    }
+
+    #imagePreviewBar {
+      display: none; width: 100%; background: #0f172a; border: 1px solid #334155;
+      border-radius: 14px; padding: 8px 12px; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    #imagePreviewBar.visible { display: flex; }
+    .preview-info { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #cbd5e1; }
+    #previewThumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid #475569; }
+    #removeImgBtn {
+      background: #475569; color: #fff; border: none; width: 28px; height: 28px;
+      border-radius: 50%; font-weight: 700; cursor: pointer;
+    }
+
+    .input-row { display: flex; width: 100%; gap: 8px; align-items: center; }
+    input, select {
+      padding: 11px 14px; border-radius: 14px; border: 1px solid #475569;
+      background: #0f172a; color: #fff; font-size: 0.98rem; outline: none;
+    }
+    #textInput { flex: 1; border-radius: 24px; min-width: 0; }
+    #cameraBtn {
+      width: 44px; height: 44px; border-radius: 50%; border: 1px solid #475569;
+      background: #0f172a; color: #f8fafc; font-size: 1.2rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    button.send {
+      padding: 11px 16px; border-radius: 24px; border: none;
+      background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #micBtn {
+      width: 62px; height: 62px; border-radius: 50%; border: none;
+      background: #dc2626; color: white; font-size: 1.5rem;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4); cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+    }
+    #micBtn.listening { background: #16a34a; transform: scale(1.08); }
+    #status { font-size: 0.8rem; color: #94a3b8; }
+
+    /* Modal de Configuración */
+    #settingsModal {
+      display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
+      align-items: center; justify-content: center; padding: 16px; z-index: 50;
+    }
+    #settingsModal.open { display: flex; }
+    .modal-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 20px;
+      padding: 20px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .modal-card h3 { margin: 0; font-size: 1.15rem; }
+    .modal-card label { font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 6px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+    .btn-secondary { background: #334155; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; cursor: pointer; }
+    .btn-primary { background: #2563eb; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <div class="title">🇨🇱 Millaray IA</div>
+      <div class="net-badge" id="netBadge">● En línea</div>
+    </div>
+    <div class="header-actions">
+      <button id="installBtn">📲 Instalar</button>
+      <button class="icon-btn" id="voiceToggleBtn" title="Activar/Silenciar voz">🔊</button>
+      <button class="icon-btn" id="clearBtn" title="Limpiar chat">🗑️</button>
+      <button class="icon-btn" id="settingsBtn" title="Configurar API Key">⚙️</button>
+    </div>
+  </header>
+
+  <div class="personality-bar" id="personalityBar">
+    <button class="persona-btn" data-persona="buena_onda">😎 Buena onda</button>
+    <button class="persona-btn" data-persona="tecnico">🛠️ Técnica</button>
+    <button class="persona-btn" data-persona="humoristico">🤣 Chistosa</button>
+  </div>
+
+  <!-- Escenario del Avatar Femenino Animado -->
+  <div class="avatar-stage">
+    <div class="avatar-ring" id="avatarRing">
+      <svg id="millaraySvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bgGrad" cx="50%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#312e81"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+          </radialGradient>
+          <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#1e1b4b"/>
+            <stop offset="100%" stop-color="#090d16"/>
+          </linearGradient>
+          <linearGradient id="shirtGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#1d4ed8"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Fondo -->
+        <rect width="200" height="200" fill="url(#bgGrad)"/>
+
+        <!-- Cabello trasero -->
+        <path d="M44 98 C40 42, 160 42, 156 98 L164 178 C135 188, 65 188, 36 178 Z" fill="url(#hairGrad)"/>
+
+        <!-- Hombros y polera -->
+        <path d="M38 198 C44 156, 72 146, 100 146 C128 146, 156 156, 162 198 Z" fill="url(#shirtGrad)"/>
+        <!-- Estrella chilena sutil en polera -->
+        <polygon points="100,164 103,172 111,172 105,177 107,185 100,180 93,185 95,177 89,172 97,172" fill="#f8fafc" opacity="0.85"/>
+
+        <!-- Cuello -->
+        <rect x="87" y="124" width="26" height="28" rx="10" fill="#eab38f"/>
+        <path d="M87 132 Q100 142 113 132 L113 125 L87 125 Z" fill="#d49670" opacity="0.6"/>
+
+        <!-- Cabeza animada -->
+        <g class="head-float">
+          <!-- Orejas y aros -->
+          <circle cx="57" cy="96" r="8" fill="#eab38f"/>
+          <circle cx="143" cy="96" r="8" fill="#eab38f"/>
+          <circle cx="57" cy="104" r="3" fill="#38bdf8"/>
+          <circle cx="143" cy="104" r="3" fill="#38bdf8"/>
+
+          <!-- Rostro -->
+          <path d="M58 84 C58 50, 142 50, 142 84 C142 118, 122 135, 100 135 C78 135, 58 118, 58 84 Z" fill="#f5c6a5"/>
+
+          <!-- Rubor mejillas -->
+          <ellipse cx="73" cy="103" rx="9" ry="5" fill="#f43f5e" opacity="0.22"/>
+          <ellipse cx="127" cy="103" rx="9" ry="5" fill="#f43f5e" opacity="0.22"/>
+
+          <!-- Cejas -->
+          <path id="browLeft" d="M71 78 Q80 73 89 77" stroke="#1e1b4b" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+          <path id="browRight" d="M111 77 Q120 73 129 78" stroke="#1e1b4b" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+
+          <!-- Ojo izquierdo -->
+          <g class="eye-blink" id="eyeLeftGroup">
+            <ellipse cx="80" cy="89" rx="8" ry="8.5" fill="#ffffff"/>
+            <circle cx="80" cy="89" r="5" fill="#1e293b"/>
+            <circle cx="82" cy="87" r="2" fill="#ffffff"/>
+            <path d="M71 86 Q80 80 89 86" stroke="#0f172a" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+          </g>
+
+          <!-- Ojo derecho -->
+          <g class="eye-blink" id="eyeRightOpen">
+            <ellipse cx="120" cy="89" rx="8" ry="8.5" fill="#ffffff"/>
+            <circle cx="120" cy="89" r="5" fill="#1e293b"/>
+            <circle cx="122" cy="87" r="2" fill="#ffffff"/>
+            <path d="M111 86 Q120 80 129 86" stroke="#0f172a" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+          </g>
+          <path id="eyeRightWink" d="M112 90 Q120 84 128 90" stroke="#0f172a" stroke-width="3" stroke-linecap="round" fill="none" style="display:none;"/>
+
+          <!-- Lentes técnicos -->
+          <g id="techGlasses" style="display:none;">
+            <rect x="66" y="80" width="28" height="18" rx="5" fill="rgba(56, 189, 248, 0.12)" stroke="#38bdf8" stroke-width="2.2"/>
+            <rect x="106" y="80" width="28" height="18" rx="5" fill="rgba(56, 189, 248, 0.12)" stroke="#38bdf8" stroke-width="2.2"/>
+            <line x1="94" y1="88" x2="106" y2="88" stroke="#38bdf8" stroke-width="2.2"/>
+          </g>
+
+          <!-- Nariz -->
+          <path d="M99 93 L97 102 L102 103" stroke="#d49670" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+          <!-- Boca en reposo / sonrisa -->
+          <path id="mouthIdle" d="M89 115 Q100 123 111 115" stroke="#be123c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+          <!-- Boca hablando -->
+          <ellipse id="mouthTalk" cx="100" cy="116" rx="8" ry="3" fill="#9f1239" stroke="#be123c" stroke-width="2" style="display:none;"/>
+
+          <!-- Flequillo frontal -->
+          <path d="M55 82 C56 44, 144 44, 145 82 C136 64, 122 62, 112 72 C104 60, 88 60, 78 73 C68 63, 60 68, 55 82 Z" fill="url(#hairGrad)"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="avatar-info">
+      <div class="avatar-name">Millaray <span style="font-size:0.8rem; color:#38bdf8;">● IA Chilena</span></div>
+      <div class="avatar-role" id="avatarStatusText">Lista para conversar o ver fotos</div>
+      <div class="avatar-mood-pill" id="avatarMoodPill">Modo: Buena onda</div>
+    </div>
+  </div>
+
+  <div id="chat">
+    <div class="msg bot">¡Wena po! Soy Millaray, tu asistente virtual. Aprieta el botón rojo para hablarme o mándame una foto con la cámara 📷.</div>
+  </div>
+
+  <div class="controls">
+    <div id="status">Listo para escuchar</div>
+    <button id="micBtn" aria-label="Hablar">🎙️</button>
+
+    <div id="imagePreviewBar">
+      <div class="preview-info">
+        <img id="previewThumb" src="" alt="Vista previa" />
+        <span>Foto lista: habla 🎙️ o escribe tu pregunta</span>
+      </div>
+      <button id="removeImgBtn" title="Quitar foto">✕</button>
+    </div>
+
+    <div class="input-row">
+      <input type="file" id="imageInput" accept="image/*" hidden />
+      <button id="cameraBtn" title="Tomar o subir foto" aria-label="Cámara">📷</button>
+      <input type="text" id="textInput" placeholder="Escribe o saca una foto..." />
+      <button class="send" id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <div id="settingsModal">
+    <div class="modal-card">
+      <h3>⚙️ Configuración de Gemini</h3>
+      <label>
+        Tu API Key de Google AI Studio:
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." />
+      </label>
+      <label>
+        Modelo de IA:
+        <select id="modelSelect">
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (Ultra rápido)</option>
+          <option value="gemini-4-hydrogen">Gemini 4 Hydrogen (Más inteligente)</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="closeSettingsBtn">Cancelar</button>
+        <button class="btn-primary" id="saveSettingsBtn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Generación dinámica de Iconos PNG (192x192 y 512x512) y Web App Manifest embebido
+    (function inicializarPWAUnificada() {
+      function generarIconoPNG(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = size / 512;
+
+        // Fondo oscuro redondeado
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, size, size);
+
+        // Círculo exterior con borde celeste
+        ctx.beginPath();
+        ctx.arc(256 * s, 256 * s, 205 * s, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fill();
+        ctx.lineWidth = 14 * s;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.stroke();
+
+        // Cabello trasero
+        ctx.beginPath();
+        ctx.moveTo(128 * s, 245 * s);
+        ctx.bezierCurveTo(120 * s, 110 * s, 392 * s, 110 * s, 384 * s, 245 * s);
+        ctx.lineTo(402 * s, 415 * s);
+        ctx.bezierCurveTo(330 * s, 438 * s, 182 * s, 438 * s, 110 * s, 415 * s);
+        ctx.closePath();
+        ctx.fillStyle = '#090d16';
+        ctx.fill();
+
+        // Polera azul
+        ctx.beginPath();
+        ctx.moveTo(125 * s, 445 * s);
+        ctx.bezierCurveTo(138 * s, 365 * s, 198 * s, 345 * s, 256 * s, 345 * s);
+        ctx.bezierCurveTo(314 * s, 345 * s, 374 * s, 365 * s, 387 * s, 445 * s);
+        ctx.closePath();
+        ctx.fillStyle = '#2563eb';
+        ctx.fill();
+
+        // Cuello
+        ctx.fillStyle = '#eab38f';
+        ctx.fillRect(226 * s, 300 * s, 60 * s, 60 * s);
+
+        // Rostro
+        ctx.beginPath();
+        ctx.moveTo(158 * s, 215 * s);
+        ctx.bezierCurveTo(158 * s, 135 * s, 354 * s, 135 * s, 354 * s, 215 * s);
+        ctx.bezierCurveTo(354 * s, 295 * s, 308 * s, 332 * s, 256 * s, 332 * s);
+        ctx.bezierCurveTo(204 * s, 332 * s, 158 * s, 295 * s, 158 * s, 215 * s);
+        ctx.fillStyle = '#f5c6a5';
+        ctx.fill();
+
+        // Ojos
+        [210, 302].forEach(cx => {
+          ctx.beginPath();
+          ctx.arc(cx * s, 226 * s, 18 * s, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(cx * s, 226 * s, 11 * s, 0, Math.PI * 2);
+          ctx.fillStyle = '#1e293b';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc((cx + 4) * s, 221 * s, 4 * s, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+        });
+
+        // Sonrisa
+        ctx.beginPath();
+        ctx.moveTo(230 * s, 284 * s);
+        ctx.quadraticCurveTo(256 * s, 306 * s, 282 * s, 284 * s);
+        ctx.lineWidth = 8 * s;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#be123c';
+        ctx.stroke();
+
+        // Flequillo
+        ctx.beginPath();
+        ctx.moveTo(152 * s, 210 * s);
+        ctx.bezierCurveTo(155 * s, 120 * s, 357 * s, 120 * s, 360 * s, 210 * s);
+        ctx.bezierCurveTo(338 * s, 168 * s, 306 * s, 164 * s, 282 * s, 186 * s);
+        ctx.bezierCurveTo(264 * s, 158 * s, 228 * s, 158 * s, 206 * s, 188 * s);
+        ctx.bezierCurveTo(182 * s, 166 * s, 164 * s, 176 * s, 152 * s, 210 * s);
+        ctx.fillStyle = '#090d16';
+        ctx.fill();
+
+        return canvas.toDataURL('image/png');
+      }
+
+      const icon192 = generarIconoPNG(192);
+      const icon512 = generarIconoPNG(512);
+
+      document.getElementById('dynamicIcon').href = icon192;
+      document.getElementById('dynamicAppleIcon').href = icon192;
+
+      const manifestObj = {
+        name: 'Millaray · Asistente Chilena IA',
+        short_name: 'Millaray IA',
+        description: 'Millaray, asistente virtual femenina por voz con acento y personalidad chilena.',
+        start_url: window.location.href,
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#0f172a',
+        theme_color: '#0f172a',
+        lang: 'es-CL',
+        icons: [
+          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+      document.getElementById('dynamicManifest').href = URL.createObjectURL(manifestBlob);
+    })();
+
+    // Botón de instalación nativa en Android Chrome
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'inline-block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') installBtn.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // Monitor de conexión Online / Offline
+    const netBadge = document.getElementById('netBadge');
+    function actualizarEstadoRed() {
+      if (navigator.onLine) {
+        netBadge.textContent = '● En línea';
+        netBadge.classList.remove('offline');
+      } else {
+        netBadge.textContent = '● Sin señal (Modo Offline)';
+        netBadge.classList.add('offline');
+      }
+    }
+    window.addEventListener('online', actualizarEstadoRed);
+    window.addEventListener('offline', actualizarEstadoRed);
+    actualizarEstadoRed();
+
+    // Elementos del Avatar
+    const avatarRing = document.getElementById('avatarRing');
+    const avatarStatusText = document.getElementById('avatarStatusText');
+    const avatarMoodPill = document.getElementById('avatarMoodPill');
+    const techGlasses = document.getElementById('techGlasses');
+    const eyeRightOpen = document.getElementById('eyeRightOpen');
+    const eyeRightWink = document.getElementById('eyeRightWink');
+    const mouthIdle = document.getElementById('mouthIdle');
+    const mouthTalk = document.getElementById('mouthTalk');
+    let lipSyncTimer = null;
+
+    function setAvatarEstado(estado, textoEstado) {
+      avatarRing.classList.remove('listening', 'speaking', 'thinking');
+      if (estado) avatarRing.classList.add(estado);
+      if (textoEstado) avatarStatusText.textContent = textoEstado;
+
+      if (estado === 'speaking') {
+        iniciarMovimientoLabios();
+      } else {
+        detenerMovimientoLabios();
+      }
+    }
+
+    function iniciarMovimientoLabios() {
+      detenerMovimientoLabios();
+      mouthIdle.style.display = 'none';
+      mouthTalk.style.display = 'block';
+      lipSyncTimer = setInterval(() => {
+        const apertura = (Math.random() * 6 + 2).toFixed(1);
+        const ancho = (Math.random() * 4 + 6).toFixed(1);
+        mouthTalk.setAttribute('ry', apertura);
+        mouthTalk.setAttribute('rx', ancho);
+      }, 115);
+    }
+
+    function detenerMovimientoLabios() {
+      if (lipSyncTimer) {
+        clearInterval(lipSyncTimer);
+        lipSyncTimer = null;
+      }
+      mouthTalk.style.display = 'none';
+      mouthIdle.style.display = 'block';
+    }
+
+    const chat = document.getElementById('chat');
+    const micBtn = document.getElementById('micBtn');
+    const statusEl = document.getElementById('status');
+    const textInput = document.getElementById('textInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreviewBar = document.getElementById('imagePreviewBar');
+    const previewThumb = document.getElementById('previewThumb');
+    const removeImgBtn = document.getElementById('removeImgBtn');
+    const voiceToggleBtn = document.getElementById('voiceToggleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const modelSelect = document.getElementById('modelSelect');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const personaBtns = document.querySelectorAll('.persona-btn');
+
+    let vozFemeninaCL = null;
+    let vozActiva = true;
+    let historialChat = [];
+    let imagenPendiente = null;
+
+    const PERSONALIDADES = {
+      buena_onda: {
+        nombre: 'Buena onda',
+        saludo: '¡Wena po! Aquí está Millaray en modo buena onda. Dime al tiro en qué te ayudo.',
+        rate: 1.04,
+        pitch: 1.12,
+        instruccion: `Eres Millaray, una asistente virtual chilena buena onda, cercana, simpática y práctica.
+Hablas en femenino y en español de Chile cotidiano y natural (usando expresiones como "po", "al tiro", "cachai", "bacán", "ya po", y voseo chileno como "estai", "podís", "querís"), manteniendo siempre claridad y utilidad.`
+      },
+      tecnico: {
+        nombre: 'Técnica',
+        saludo: 'Modo técnico activado. Soy Millaray y estoy lista para analizar datos, fotos y entregarte soluciones exactas.',
+        rate: 1.01,
+        pitch: 1.06,
+        instruccion: `Eres Millaray, una asistente virtual chilena técnica y profesional, con criterio de ingeniera y especialista en terreno.
+Hablas en femenino y en español de Chile formal, directo, preciso y estructurado, sin jerga callejera. Vas directo al grano, entregas cifras, unidades exactas, pasos lógicos y recomendaciones prácticas de seguridad y eficiencia.`
+      },
+      humoristico: {
+        nombre: 'Chistosa',
+        saludo: '¡Wena po! Se activó el modo bueno pa la talla. Pregunta no más antes que me dé flojera.',
+        rate: 1.09,
+        pitch: 1.16,
+        instruccion: `Eres Millaray, una asistente virtual chilena muy chistosa, rápida pa' la talla y con harta picardía criolla.
+Hablas en femenino usando modismos y dichos chilenos auténticos ("la media volá", "más perdido que el teniente Bello", "al tiro", "fome", "filete", "cachai"), tirando tallas livianas o remates cómicos en tus respuestas, pero siempre entregando la respuesta correcta y útil detrás del chiste.`
+      }
+    };
+
+    let apiKey = localStorage.getItem('gemini_api_key') || '';
+    let modeloActual = localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite';
+    let personalidadActual = localStorage.getItem('gemini_personality') || 'buena_onda';
+
+    function actualizarAspectoAvatar() {
+      const config = PERSONALIDADES[personalidadActual];
+      avatarMoodPill.textContent = `Modo: ${config.nombre}`;
+
+      techGlasses.style.display = personalidadActual === 'tecnico' ? 'block' : 'none';
+
+      if (personalidadActual === 'humoristico') {
+        eyeRightOpen.style.display = 'none';
+        eyeRightWink.style.display = 'block';
+        mouthIdle.setAttribute('d', 'M87 114 Q100 126 113 113');
+      } else {
+        eyeRightOpen.style.display = 'block';
+        eyeRightWink.style.display = 'none';
+        mouthIdle.setAttribute('d', 'M89 115 Q100 123 111 115');
+      }
+    }
+
+    function actualizarBotonesPersonalidad() {
+      personaBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.persona === personalidadActual);
+      });
+      actualizarAspectoAvatar();
+    }
+
+    personaBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nueva = btn.dataset.persona;
+        if (nueva === personalidadActual) return;
+        personalidadActual = nueva;
+        localStorage.setItem('gemini_personality', personalidadActual);
+        actualizarBotonesPersonalidad();
+
+        const config = PERSONALIDADES[personalidadActual];
+        agregarMensaje(`Modo cambiado a: ${config.nombre}`, 'system-note');
+        agregarMensaje(config.saludo, 'bot');
+        hablar(config.saludo);
+      });
+    });
+
+    actualizarBotonesPersonalidad();
+
+    if (!apiKey) {
+      setTimeout(() => abrirAjustes(), 400);
+    }
+
+    function abrirAjustes() {
+      apiKeyInput.value = apiKey;
+      modelSelect.value = modeloActual;
+      settingsModal.classList.add('open');
+    }
+
+    settingsBtn.addEventListener('click', abrirAjustes);
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('open'));
+    saveSettingsBtn.addEventListener('click', () => {
+      apiKey = apiKeyInput.value.trim();
+      modeloActual = modelSelect.value;
+      localStorage.setItem('gemini_api_key', apiKey);
+      localStorage.setItem('gemini_model', modeloActual);
+      settingsModal.classList.remove('open');
+      statusEl.textContent = 'Configuración guardada';
+    });
+
+    voiceToggleBtn.addEventListener('click', () => {
+      vozActiva = !vozActiva;
+      voiceToggleBtn.textContent = vozActiva ? '🔊' : '🔇';
+      if (!vozActiva) {
+        window.speechSynthesis.cancel();
+        setAvatarEstado(null, 'Voz silenciada');
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      historialChat = [];
+      limpiarImagenPendiente();
+      const config = PERSONALIDADES[personalidadActual];
+      chat.innerHTML = `<div class="msg bot">${config.saludo}</div>`;
+      window.speechSynthesis.cancel();
+      setAvatarEstado(null, 'Lista para conversar');
+    });
+
+    function comprimirImagen(file, maxDimension = 1024, calidad = 0.82) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              } else {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', calidad);
+            const base64 = dataUrl.split(',')[1];
+            resolve({ base64, mimeType: 'image/jpeg', dataUrl });
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function limpiarImagenPendiente() {
+      imagenPendiente = null;
+      imageInput.value = '';
+      previewThumb.src = '';
+      imagePreviewBar.classList.remove('visible');
+    }
+
+    cameraBtn.addEventListener('click', () => {
+      imageInput.click();
+    });
+
+    imageInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      statusEl.textContent = 'Procesando foto...';
+      try {
+        imagenPendiente = await comprimirImagen(file);
+        previewThumb.src = imagenPendiente.dataUrl;
+        imagePreviewBar.classList.add('visible');
+        statusEl.textContent = 'Foto lista: aprieta el micrófono o escribe';
+        setAvatarEstado(null, 'Foto cargada, pregúntame lo que quieras');
+        textInput.focus();
+      } catch (err) {
+        statusEl.textContent = 'No se pudo cargar la foto';
+      }
+    });
+
+    removeImgBtn.addEventListener('click', () => {
+      limpiarImagenPendiente();
+      statusEl.textContent = 'Listo para escuchar';
+      setAvatarEstado(null, 'Lista para conversar');
+    });
+
+    function cargarVoces() {
+      const voces = window.speechSynthesis.getVoices();
+      const nombresFemeninos = /female|mujer|paulina|catalina|sabina|helena|laura|monica|sofia|google español/i;
+
+      vozFemeninaCL =
+        voces.find(v => v.lang === 'es-CL' && nombresFemeninos.test(v.name)) ||
+        voces.find(v => v.lang === 'es-CL') ||
+        voces.find(v => v.lang.startsWith('es') && nombresFemeninos.test(v.name)) ||
+        voces.find(v => v.lang.startsWith('es'));
+    }
+    window.speechSynthesis.onvoiceschanged = cargarVoces;
+    cargarVoces();
+
+    function hablar(texto) {
+      if (!vozActiva) return;
+      window.speechSynthesis.cancel();
+      const textoLimpio = texto.replace(/[*#_`~]/g, '');
+      const utterance = new SpeechSynthesisUtterance(textoLimpio);
+      const config = PERSONALIDADES[personalidadActual];
+
+      utterance.lang = 'es-CL';
+      if (vozFemeninaCL) utterance.voice = vozFemeninaCL;
+      utterance.rate = config.rate;
+      utterance.pitch = config.pitch;
+
+      utterance.onstart = () => {
+        statusEl.textContent = 'Millaray está hablando... 🗣️';
+        setAvatarEstado('speaking', 'Hablando...');
+      };
+      utterance.onend = () => {
+        statusEl.textContent = 'Listo para escuchar';
+        setAvatarEstado(null, 'Lista para conversar');
+      };
+      utterance.onerror = () => {
+        setAvatarEstado(null, 'Lista para conversar');
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function agregarMensaje(texto, tipo, imageDataUrl = null) {
+      const div = document.createElement('div');
+      div.className = `msg ${tipo}`;
+      if (imageDataUrl) {
+        const img = document.createElement('img');
+        img.src = imageDataUrl;
+        img.className = 'chat-photo';
+        div.appendChild(img);
+      }
+      if (texto) {
+        const span = document.createElement('span');
+        span.textContent = texto;
+        div.appendChild(span);
+      }
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function responderOffline(entrada, tieneImagen) {
+      if (tieneImagen) {
+        return 'Pucha, para mirar fotos necesito internet porque las analizo en la nube. Apenas vuelvas a tener señal, mándamela de nuevo.';
+      }
+      const t = entrada.toLowerCase().trim();
+      if (t.includes('hora')) {
+        const ahora = new Date();
+        return `Aunque estamos sin señal, te digo al tiro: son las ${ahora.getHours()} con ${String(ahora.getMinutes()).padStart(2, '0')} minutos.`;
+      }
+      if (t.includes('fecha') || t.includes('día es hoy')) {
+        const hoy = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        return `Estamos sin internet, pero según el reloj del celu hoy es ${hoy}.`;
+      }
+      if (t.includes('chiste')) {
+        return '¿Por qué el libro de matemáticas estaba triste? Porque tenía demasiados problemas, po.';
+      }
+      const matchMat = t.match(/(\d+(?:\.\d+)?)\s*([+\-*/x])\s*(\d+(?:\.\d+)?)/);
+      if (matchMat) {
+        const a = parseFloat(matchMat[1]);
+        const op = matchMat[2];
+        const b = parseFloat(matchMat[3]);
+        let res = 0;
+        if (op === '+') res = a + b;
+        if (op === '-') res = a - b;
+        if (op === '*' || op === 'x') res = a * b;
+        if (op === '/') res = b !== 0 ? a / b : 'indefinido';
+        return `Sin internet igual te saco la cuenta: ${a} ${op} ${b} es ${res}.`;
+      }
+      return 'Pucha, ahora mismo estás sin internet y no me puedo conectar a Gemini. Apenas agarres señal te respondo eso; mientras tanto te puedo dar la hora, la fecha o hacer cálculos rápidos.';
+    }
+
+    function construirPromptSistema() {
+      const ahoraChile = new Date().toLocaleString('es-CL', {
+        timeZone: 'America/Santiago',
+        dateStyle: 'full',
+        timeStyle: 'short'
+      });
+      const config = PERSONALIDADES[personalidadActual];
+
+      return `${config.instruccion}
+REGLA CLAVE PARA VOZ: Tus respuestas serán leídas en voz alta por un sintetizador de voz. Por lo tanto:
+1. Sé concisa, directa y conversacional (idealmente 1 a 3 párrafos cortos, salvo que te pidan algo detallado).
+2. NO uses formato Markdown (cero asteriscos, cero almohadillas, cero viñetas con símbolos), escribe en texto plano fluido.
+Contexto actual en Chile: ${ahoraChile}.`;
+    }
+
+    async function consultarGemini(entradaUsuario, imagenAdjunta) {
+      if (!navigator.onLine) {
+        const respLocal = responderOffline(entradaUsuario, Boolean(imagenAdjunta));
+        agregarMensaje(respLocal, 'bot');
+        hablar(respLocal);
+        return;
+      }
+
+      if (!apiKey) {
+        agregarMensaje('Primero ingresa tu API Key en el botón ⚙️ de arriba para conectarme.', 'error');
+        abrirAjustes();
+        return;
+      }
+
+      const partesUsuario = [{ text: entradaUsuario }];
+      if (imagenAdjunta) {
+        partesUsuario.push({
+          inlineData: {
+            mimeType: imagenAdjunta.mimeType,
+            data: imagenAdjunta.base64
+          }
+        });
+      }
+
+      historialChat.push({
+        role: 'user',
+        parts: partesUsuario
+      });
+
+      statusEl.textContent = imagenAdjunta ? 'Millaray está mirando la foto... 👀' : 'Millaray está pensando... 🤔';
+      setAvatarEstado('thinking', imagenAdjunta ? 'Analizando foto...' : 'Pensando...');
+      sendBtn.disabled = true;
+      micBtn.disabled = true;
+      cameraBtn.disabled = true;
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActual}:generateContent`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: construirPromptSistema() }]
+            },
+            contents: historialChat
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || `Error HTTP ${response.status}`);
+        }
+
+        const respuestaIA = data.candidates?.[0]?.content?.parts?.[0]?.text
+          || 'Pucha, me quedé en blanco. Intenta preguntarme de nuevo.';
+
+        historialChat.push({
+          role: 'model',
+          parts: [{ text: respuestaIA }]
+        });
+
+        if (historialChat.length > 14) {
+          historialChat = historialChat.slice(-14);
+        }
+
+        agregarMensaje(respuestaIA, 'bot');
+        if (vozActiva) {
+          hablar(respuestaIA);
+        } else {
+          setAvatarEstado(null, 'Lista para conversar');
+        }
+      } catch (err) {
+        historialChat.pop();
+        if (!navigator.onLine) {
+          const respLocal = responderOffline(entradaUsuario, Boolean(imagenAdjunta));
+          agregarMensaje(respLocal, 'bot');
+          hablar(respLocal);
+        } else {
+          agregarMensaje(`¡Chuta! Hubo un problema al conectar con Gemini: ${err.message}`, 'error');
+          statusEl.textContent = 'Error de conexión';
+          setAvatarEstado(null, 'Error de conexión');
+        }
+      } finally {
+        sendBtn.disabled = false;
+        micBtn.disabled = false;
+        cameraBtn.disabled = false;
+        if (!vozActiva) statusEl.textContent = 'Listo para escuchar';
+      }
+    }
+
+    function procesarEntrada(texto) {
+      const textoLimpio = texto.trim();
+      if (!textoLimpio && !imagenPendiente) return;
+
+      const fotoAEnviar = imagenPendiente;
+      const consultaFinal = textoLimpio || 'Analiza esta imagen y dime qué ves o en qué me puedes ayudar con esto.';
+
+      limpiarImagenPendiente();
+      agregarMensaje(consultaFinal, 'user', fotoAEnviar ? fotoAEnviar.dataUrl : null);
+      consultarGemini(consultaFinal, fotoAEnviar);
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-CL';
+      recognition.interimResults = false;
+
+      micBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        recognition.start();
+        micBtn.classList.add('listening');
+        statusEl.textContent = 'Escuchando... habla ahora';
+        setAvatarEstado('listening', 'Te escucho...');
+      });
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        procesarEntrada(transcript);
+      };
+
+      recognition.onerror = () => {
+        statusEl.textContent = 'No te caché bien, intenta de nuevo.';
+        setAvatarEstado(null, 'No te escuché bien, intenta de nuevo');
+      };
+
+      recognition.onend = () => {
+        micBtn.classList.remove('listening');
+      };
+    } else {
+      statusEl.textContent = 'Tu navegador no soporta micrófono web; usa el teclado.';
+      micBtn.disabled = true;
+    }
+
+    sendBtn.addEventListener('click', () => {
+      procesarEntrada(textInput.value);
+      textInput.value = '';
+    });
+
+    textInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        procesarEntrada(textInput.value);
+        textInput.value = '';
+      }
+    });
+  </script>
+</body>
+</html>
